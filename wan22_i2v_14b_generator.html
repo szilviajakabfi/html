@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wan 2.2 I2V 14B — Video Generator</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0d12; --panel: #141821; --panel2: #1b2230;
+    --line: #2a3445; --text: #edf2fa; --muted: #98a5b8;
+    --accent: #8b7cff; --accent2: #5de0c1; --danger: #ff7185;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 32px 18px;
+    background: radial-gradient(circle at 15% 0%, #242044 0, transparent 35%), var(--bg);
+    color: var(--text); font: 15px/1.5 Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+  .app { width: min(1120px, 100%); margin: auto; }
+  header { margin-bottom: 26px; }
+  .eyebrow { color: var(--accent2); text-transform: uppercase; letter-spacing: .16em; font-size: 11px; font-weight: 800; }
+  h1 { margin: 7px 0 5px; font-size: clamp(27px, 5vw, 42px); letter-spacing: -.04em; }
+  .subtitle { color: var(--muted); margin: 0; }
+  .badge { display: inline-block; margin-top: 13px; padding: 5px 10px; border: 1px solid #514b88; border-radius: 99px; color: #c9c2ff; font-size: 12px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr); gap: 18px; }
+  .panel { background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line); border-radius: 18px; padding: 22px; box-shadow: 0 16px 50px #0003; }
+  h2 { font-size: 16px; margin: 0 0 17px; }
+  label { display: block; margin: 15px 0 7px; font-size: 13px; font-weight: 700; color: #dce4f1; }
+  textarea, input, select {
+    width: 100%; border: 1px solid var(--line); border-radius: 10px;
+    background: #0d1119; color: var(--text); padding: 12px 13px; font: inherit; outline: none;
+  }
+  textarea { min-height: 116px; resize: vertical; }
+  textarea:focus, input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #8b7cff22; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .drop {
+    border: 1px dashed #58647a; border-radius: 13px; min-height: 180px;
+    display: grid; place-items: center; text-align: center; padding: 16px;
+    background: #0d1119; cursor: pointer; overflow: hidden;
+  }
+  .drop:hover { border-color: var(--accent); }
+  .drop img { display: none; max-width: 100%; max-height: 270px; border-radius: 8px; object-fit: contain; }
+  .drop.has-image img { display: block; }
+  .drop.has-image .upload-copy { display: none; }
+  .upload-copy strong { display: block; margin-bottom: 5px; }
+  .upload-copy span { color: var(--muted); font-size: 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .range-row { display: flex; align-items: center; gap: 12px; }
+  input[type="range"] { padding: 0; accent-color: var(--accent); }
+  .range-value { min-width: 48px; text-align: right; color: var(--accent2); font-weight: 800; }
+  .check { display: flex; gap: 9px; align-items: center; color: var(--muted); font-size: 13px; margin-top: 14px; }
+  .check input { width: auto; accent-color: var(--accent); }
+  button {
+    width: 100%; margin-top: 21px; padding: 14px 18px; border: 0; border-radius: 11px;
+    background: linear-gradient(100deg, var(--accent), #5d9cff); color: white;
+    font-size: 15px; font-weight: 800; cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: wait; }
+  .preview {
+    min-height: 340px; display: grid; place-items: center; text-align: center;
+    border: 1px solid var(--line); border-radius: 13px; background:
+      linear-gradient(45deg, #171d29 25%, transparent 25%, transparent 75%, #171d29 75%),
+      linear-gradient(45deg, #171d29 25%, #10151e 25%, #10151e 75%, #171d29 75%);
+    background-position: 0 0, 10px 10px; background-size: 20px 20px;
+    overflow: hidden; color: var(--muted); padding: 12px;
+  }
+  .preview video { width: 100%; max-height: 480px; display: none; border-radius: 8px; background: #000; }
+  .preview video.ready { display: block; }
+  .status { margin-top: 14px; color: var(--muted); font-size: 13px; min-height: 22px; }
+  .progress { height: 6px; background: #252d3b; border-radius: 99px; overflow: hidden; margin-top: 10px; display: none; }
+  .progress > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .25s; }
+  .notice { margin-top: 16px; padding: 12px 13px; border: 1px solid #66552e; border-radius: 10px; color: #d9c99e; background: #332a1829; font-size: 12px; }
+  .download { display: none; margin-top: 12px; color: var(--accent2); font-weight: 700; text-decoration: none; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin: 22px 0 0; }
+  @media (max-width: 780px) { .layout { grid-template-columns: 1fr; } body { padding: 22px 12px; } .panel { padding: 17px; } }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <div class="eyebrow">AI video studio</div>
+    <h1>Wan 2.2 I2V 14B</h1>
+    <p class="subtitle">Image-to-video generation workspace</p>
+    <span class="badge">14B Image-to-Video Model</span>
+  </header>
+
+  <div class="layout">
+    <section class="panel">
+      <h2>01 — Input & prompt</h2>
+      <label for="imageInput">Starting image</label>
+      <label class="drop" id="dropZone" for="imageInput">
+        <div class="upload-copy"><strong>＋ Upload an image</strong><span>PNG, JPG or WEBP · Choose the first frame</span></div>
+        <img id="imagePreview" alt="Starting image preview">
+      </label>
+      <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+
+      <label for="prompt">Positive prompt</label>
+      <textarea id="prompt" placeholder="Describe the motion, camera movement, subject, lighting and scene...">A cinematic shot. The subject moves naturally, subtle environmental motion, smooth camera movement, realistic details.</textarea>
+      <div class="hint">Describe what should happen in the video. The uploaded image guides the first frame.</div>
+
+      <label for="negative">Negative prompt</label>
+      <textarea id="negative" style="min-height:72px" placeholder="Unwanted motion, artifacts, distortions...">blurry, flicker, distorted anatomy, warped objects, text, watermark, low quality</textarea>
+
+      <label for="seed">Seed</label>
+      <input id="seed" type="number" placeholder="-1 = random" value="-1">
+      <div class="hint">Use -1 for a random seed, or enter a fixed value to reproduce a result (if supported by your backend).</div>
+    </section>
+
+    <section class="panel">
+      <h2>02 — Generation settings</h2>
+      <div class="grid2">
+        <div><label for="resolution">Resolution</label><select id="resolution"><option value="480p">480p</option><option value="720p" selected>720p</option><option value="1080p">1080p (if supported)</option></select></div>
+        <div><label for="aspect">Aspect ratio</label><select id="aspect"><option value="auto">Match image</option><option value="16:9">16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option></select></div>
+        <div><label for="frames">Frames</label><select id="frames"><option value="49">49</option><option value=" otra">Other (backend-defined)</option><option value="81">81</option></select></div>
+        <div><label for="fps">FPS</label><select id="fps"><option>16</option><option>24</option><option>25</option><option>30</option></select></div>
+      </div>
+
+      <label for="steps">Inference steps</label>
+      <div class="range-row"><input id="steps" type="range" min="10" max="60" value="30"><span class="range-value" id="stepsValue">30</span></div>
+
+      <label for="guidance">Guidance scale</label>
+      <div class="range-row"><input id="guidance" type="range" min="1" max="10" step=".5" value="5"><span class="range-value" id="guidanceValue">5</span></div>
+
+      <label for="motion">Motion strength</label>
+      <div class="range-row"><input id="motion" type="range" min="1" max="10" value="5"><span class="range-value" id="motionValue">5</span></div>
+
+      <label class="check"><input id="enhance" type="checkbox"> Enable prompt enhancement (if supported)</label>
+      <label class="check"><input id="offload" type="checkbox" checked> Allow model CPU offload (backend option)</label>
+
+      <button id="generateBtn">Generate video</button>
+      <div class="status" id="status">Ready — upload an image and enter a prompt.</div>
+      <div class="progress" id="progress"><div id="progressBar"></div></div>
+      <div class="notice">
+        This is a front-end interface. To generate real videos, connect it to a Wan 2.2 I2V 14B backend (for example, a ComfyUI workflow or your own inference API) in the JavaScript section.
+      </div>
+    </section>
+
+    <section class="panel" style="grid-column:1/-1">
+      <h2>03 — Output</h2>
+      <div class="preview" id="outputArea">
+        <div id="emptyOutput">Your generated video will appear here.</div>
+        <video id="outputVideo" controls playsinline></video>
+      </div>
+      <a class="download" id="downloadLink" download="wan22-i2v-output.mp4">↓ Download video</a>
+    </section>
+  </div>
+  <footer>Wan 2.2 I2V 14B · Single-file HTML interface · Connect a compatible inference backend to enable generation</footer>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let uploadedImage = null;
+
+$("imageInput").addEventListener("change", event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) return;
+  if (uploadedImage) URL.revokeObjectURL(uploadedImage);
+  uploadedImage = URL.createObjectURL(file);
+  $("imagePreview").src = uploadedImage;
+  $("dropZone").classList.add("has-image");
+});
+
+["steps", "guidance", "motion"].forEach(id => {
+  $(id).addEventListener("input", () => $(id + "Value").textContent = $(id).value);
+});
+
+function getGenerationSettings() {
+  return {
+    model: "wan2.2-i2v-14b",
+    image: $("imageInput").files[0] || null,
+    prompt: $("prompt").value.trim(),
+    negative_prompt: $("negative").value.trim(),
+    seed: Number($("seed").value || -1),
+    resolution: $("resolution").value,
+    aspect_ratio: $("aspect").value,
+    frames: $("frames").value,
+    fps: Number($("fps").value),
+    steps: Number($("steps").value),
+    guidance_scale: Number($("guidance").value),
+    motion_strength: Number($("motion").value),
+    prompt_enhancement: $("enhance").checked,
+    cpu_offload: $("offload").checked
+  };
+}
+
+async function generateVideo() {
+  const settings = getGenerationSettings();
+  if (!settings.image) {
+    $("status").textContent = "Please upload a starting image first.";
+    $("imageInput").click();
+    return;
+  }
+  if (!settings.prompt) {
+    $("status").textContent = "Please enter a positive prompt.";
+    $("prompt").focus();
+    return;
+  }
+
+  /*
+   * BACKEND INTEGRATION:
+   * Replace the demo block below with your API call.
+   * Example contract:
+   *   POST /api/generate
+   *   multipart/form-data: image + settings JSON
+   *   Response: { "video_url": "/outputs/result.mp4" }
+   *
+   * Do not expose private API keys in browser-side JavaScript.
+   */
+  $("generateBtn").disabled = true;
+  $("progress").style.display = "block";
+  $("progressBar").style.width = "8%";
+  $("status").textContent = "Demo mode: interface is ready, but no generation backend is connected.";
+
+  let progress = 8;
+  const timer = setInterval(() => {
+    progress = Math.min(progress + Math.random() * 8, 92);
+    $("progressBar").style.width = progress + "%";
+  }, 450);
+
+  try {
+    // Replace this demo timeout with fetch() to your own backend.
+    await new Promise(resolve => setTimeout(resolve, 2200));
+    $("status").textContent = "No video generated: connect a Wan 2.2 I2V 14B backend in generateVideo().";
+    $("progressBar").style.width = "100%";
+  } catch (error) {
+    $("status").textContent = "Generation error: " + error.message;
+  } finally {
+    clearInterval(timer);
+    $("generateBtn").disabled = false;
+  }
+}
+$("generateBtn").addEventListener("click", generateVideo);
+
+// Optional helper for displaying a video URL returned by your backend.
+function showGeneratedVideo(videoUrl) {
+  $("outputVideo").src = videoUrl;
+  $("outputVideo").classList.add("ready");
+  $("emptyOutput").style.display = "none";
+  $("downloadLink").href = videoUrl;
+  $("downloadLink").style.display = "inline-block";
+  $("status").textContent = "Video ready.";
+}
+</script>
+</body>
+</html>
